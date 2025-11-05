@@ -16,8 +16,8 @@ def moving_average_strategy(prices, short_window=20, long_window=50):
     long_ma = prices.rolling(window=long_window).mean()
 
     signals = pd.Series(0, index=prices.index)
-    signals[short_ma > long_ma] = 1   # Buy
-    signals[short_ma < long_ma] = -1  # Sell
+    signals[short_ma < long_ma] = 1   # Buy
+    signals[short_ma > long_ma] = -1  # Sell
 
     return signals
 
