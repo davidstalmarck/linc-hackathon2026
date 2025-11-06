@@ -3,8 +3,21 @@
 A Python-based trading simulation framework for testing and visualizing algorithmic trading strategies.
 
 ## Installation
+Here's an installation guide. However honestly speaking, just ask ChatGPT/Claude/your-preferred-LLM to help you with installation by copy-pasting this text + specifying your computer's operating system.
+The following python libraries will be needed for this algorithmic trading hackathon. 
 
-### Step 1: Install `uv` (Package Manager)
+- `pandas` - Data manipulation
+- `numpy` - Numerical computing
+- `matplotlib` - Plotting and visualization
+- `jupyter` - Interactive notebooks (OPTIONAL)
+
+
+### Step 1: If you are new to python and DON'T have `uv`, `pip`/`pip3` here's an installation guide for `uv` (Package Manager)
+# If you have `uv` or `pip`, you can move on to Step 2. You can double check by running the commands below
+```bash
+pip3 -version
+uv -version
+```
 
 `uv` is a fast Python package manager. Install it for your platform:
 
@@ -42,6 +55,15 @@ This will install:
 uv pip install pandas numpy matplotlib jupyter
 ```
 
+**Alternative using only pip:**
+```bash
+pip install pandas numpy matplotlib jupyter
+pip3 install pandas numpy matplotlib jupyter
+
+```
+
+Let us know in case you have problems with installing the dependencies.
+
 ## Quick Start
 
 ### Option 1: Full Run (Recommended for Quick Results)
@@ -62,11 +84,26 @@ This will:
 
 ### Option 2: Interactive Exploration (Recommended for Learning)
 
-Walk through the simulation step-by-step:
-
+First, make sure Jupyter is installed:
 ```bash
+uv pip install jupyter
+# OR with regular pip
+pip install jupyter
+```
+
+Then walk through the simulation step-by-step:
+
+**Option A: Open in browser**
+```bash
+uv run jupyter notebook algorithm.ipynb
+# OR if using pip
 jupyter notebook algorithm.ipynb
 ```
+
+**Option B: Open directly in VS Code**
+- Open `algorithm.ipynb` in VS Code
+- VS Code will prompt you to install the Jupyter extension if not already installed
+- Click "Run All" or run cells individually with Shift+Enter
 
 The notebook contains:
 - A suggested Moving Average (MA) crossover algorithm
@@ -106,7 +143,7 @@ The `TradingSimulator` class in `trading_simulator.py` is the **original referen
 2. Define your `CustomTradingSimulator` class
 3. Extend or modify the original `TradingSimulator`
 4. Use your custom class in your algorithms
-
+Jupyter command `jupyter-notebook` not found.
 Example:
 ```python
 from trading_simulator import TradingSimulator
