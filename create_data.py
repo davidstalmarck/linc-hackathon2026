@@ -1,31 +1,39 @@
-import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
+import yfinance as yf
+import numpy as np
 
-# Generate synthetic stock data
-def generate_stock_data(start_price, num_days=365, volatility=0.02):
-    """Generate synthetic stock price data using random walk"""
-    returns = np.random.normal(0.0005, volatility, num_days)
-    prices = start_price * np.exp(np.cumsum(returns))
-    return prices
+# Volatilitetsindex, Europe Stock Index, omx30 
+index = ['^VIX', '^STOXX', '^OMX']
 
-# Stock configuration
-stocks = {
-    'AAPL': 150,
-    'GOOGL': 140,
-    'MSFT': 300,
-    'TSLA': 200
-}
+#Olja, Guld, Silver
+commodities = ['CL=F', 'GC=F', 'SI=F']
 
-# Generate dates and prices
-num_days = 365
-dates = [(datetime.now() - timedelta(days=num_days-i)).date() for i in range(num_days)]
+# Stock pairs
+stocks = ['JPM', 'BAC', 'XOM', 'CVX', 'NKE', 'ADDYY', 'INTC', 'AMD']
 
-# Create prices DataFrame
-prices_df = pd.DataFrame({'Date': dates})
-for ticker, start_price in stocks.items():
-    prices_df[ticker] = generate_stock_data(start_price, num_days)
+#EUR/USD, USD/GBP, USD/JPY, EUR/JPY
+currencies = ['EURUSD=X', 'GBP=X', 'JPY=X', 'EURJPY=X']    
 
-# Save prices CSV (date-only format)
-prices_df.to_csv('prices.csv', index=False)
-print(f"Generated prices.csv: {len(prices_df)} days x {len(stocks)} stocks")
+start_date = "2021-01-01"
+end_date = "2026-01-01"
+
+all_tickers = index + commodities + stocks + currencies
+all_data = yf.download(all_tickers, start=start_date, end=end_date, progress=False)
+
+# Find common dates
+if isinstance(all_data.columns, pd.MultiIndex):
+    open_prices = all_data['Open']
+else:
+    open_prices = all_data['Open'].to_frame()
+
+common_dates = open_prices.dropna().index
+
+def save_asset_group(tickers, filename, prefix):
+    df = open_prices[tickers].loc[common_dates].copy()
+    df.columns = [f"{prefix}{i}" for i in range(1, len(tickers) + 1)]
+    df.to_csv(f"{filename}.csv", index=False)
+
+save_asset_group(index, "Indices", "I")
+save_asset_group(commodities, "Commodities", "C")
+save_asset_group(stocks, "Stocks", "S")
+save_asset_group(currencies, "Currencies", "FX")
