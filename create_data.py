@@ -1,39 +1,43 @@
 import pandas as pd
 import yfinance as yf
-import numpy as np
 
-# Volatilitetsindex, Europe Stock Index, omx30 
-index = ['^VIX', '^STOXX', '^OMX']
+# Volatilits ETF, Emerging markets ETF, Euro & APAC large companies ETF 
+index = ['^VIX', 'EEM', 'EFA']
 
-#Olja, Guld, Silver
-commodities = ['CL=F', 'GC=F', 'SI=F']
+#Olja, Guld, Silver, Natural Gas, Copper
+commodities = ['CL=F', 'GC=F', 'SI=F', 'NG=F', 'HG=F']
 
-# Stock pairs
-stocks = ['JPM', 'BAC', 'XOM', 'CVX', 'NKE', 'ADDYY', 'INTC', 'AMD']
+# European auto pair (Volkswagen & Stellantis), Nordic banks pair (Nordea & SEB), European Energy pair (TotalEnergies & Equinor)
+# Euro renewable energy pair (ENEL & Vestas), Nordic materials/mining pair (Boliden & Yara international)
+# Standalones: Ericsson, BNP Paribas, Indra Sistemas, Vestas, Tullow Oil 
+stocks = ['VOW3.DE', 'STLAM.MI', 'NDA-FI.HE', 'SEB-A.ST', 'TTE', 'EQNR.OL', 'ENEL.MI', 'VWS.CO', 'BOL.ST', 'YAR.OL', 'ERIC', 'BNP.PA', 'IDR.MC', 'TLW.L']
 
-#EUR/USD, USD/GBP, USD/JPY, EUR/JPY
-currencies = ['EURUSD=X', 'GBP=X', 'JPY=X', 'EURJPY=X']    
+#EUR/USD, USD/JPY, USD/SEK
+currencies = ['EURUSD=X', 'JPY=X', 'SEK=X']
 
-start_date = "2021-01-01"
+start_date = "2010-01-01"
 end_date = "2026-01-01"
 
 all_tickers = index + commodities + stocks + currencies
-all_data = yf.download(all_tickers, start=start_date, end=end_date, progress=False)
+all_data = yf.download(all_tickers, start=start_date, end=end_date, progress=False, auto_adjust=True)
 
 # Find common dates
 if isinstance(all_data.columns, pd.MultiIndex):
-    open_prices = all_data['Open']
+    adj_close_prices = all_data['Close']
 else:
-    open_prices = all_data['Open'].to_frame()
+    adj_close_prices = all_data['Close'].to_frame()
 
-common_dates = open_prices.dropna().index
+missing = [col for col in adj_close_prices.columns if adj_close_prices[col].iloc[:20].isna().all()]                                                                                          
+print(f"Tickers missing data from {start_date}:", missing)     
+common_dates = adj_close_prices.dropna().index
 
 def save_asset_group(tickers, filename, prefix):
-    df = open_prices[tickers].loc[common_dates].copy()
-    df.columns = [f"{prefix}{i}" for i in range(1, len(tickers) + 1)]
+    df = adj_close_prices[tickers].loc[common_dates].copy()
+    # Make dates anonymous
     df.to_csv(f"{filename}.csv", index=False)
 
-save_asset_group(index, "Indices", "I")
-save_asset_group(commodities, "Commodities", "C")
-save_asset_group(stocks, "Stocks", "S")
-save_asset_group(currencies, "Currencies", "FX")
+print(f"Saving asset data from {common_dates[0]} to {common_dates[-1]}")
+save_asset_group(index, "indices", "I")
+save_asset_group(commodities, "commodities", "C")
+save_asset_group(stocks, "stocks", "S")
+save_asset_group(currencies, "currencies", "FX")

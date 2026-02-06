@@ -4,14 +4,75 @@ import matplotlib.pyplot as plt
 
 # ===== SIMULATE TRADING AND GENERATE ORDERS =====
 class TradingSimulator:
-    def __init__(self, stocks, initial_cash=100000):
-        self.stocks = stocks
-        self.cash = initial_cash
-        self.initial_cash = initial_cash
-        self.portfolio = {ticker: 0 for ticker in stocks}
+    def __init__(self, assets):
+        self.assets = assets
+        self.cash = 100000
+        self.initial_cash = 100000
+        self.portfolio = {ticker: 0 for ticker in assets}
         self.orders = []
         self.portfolio_snapshots = []
         self.prices_df = None  # Will store prices for plotting
+
+    def execute_order(self, date, ticker, action, shares, price):
+        """Execute a buy/sell order and record it."""
+        action = action.upper()
+        if shares <= 0:
+            return False
+
+        if action == 'BUY' and self.cash >= price * shares:
+            cost = price * shares
+            self.cash -= cost
+            self.portfolio[ticker] += shares
+            self.orders.append({
+                'Date': date,
+                'Ticker': ticker,
+                'Action': 'BUY',
+                'Shares': shares,
+                'Price': price,
+                'Total': cost
+            })
+            return True
+
+        if action == 'SELL' and self.portfolio[ticker] >= shares:
+            proceeds = price * shares
+            self.cash += proceeds
+            self.portfolio[ticker] -= shares
+            self.orders.append({
+                'Date': date,
+                'Ticker': ticker,
+                'Action': 'SELL',
+                'Shares': shares,
+                'Price': price,
+                'Total': proceeds
+            })
+            return True
+
+        return False
+
+    def run(self, strategy_fn, prices_df, data):
+        """Run a strategy function that returns a list of orders per day."""
+        for idx, row in prices_df.iterrows():
+            date = row['Date']
+            prices = {ticker: row[ticker] for ticker in self.assets}
+            orders = strategy_fn(
+                date,
+                self.cash,
+                self.portfolio.copy(),
+                prices,
+                data["stocks"],
+                data["indexes"],
+                data["commodities"],
+                data["currencies"]
+            ) or []
+
+            if isinstance(orders, tuple):
+                orders = [orders]
+
+            for action, ticker, shares in orders:
+                price = prices[ticker]
+                self.execute_order(date, ticker, action, shares, price)
+
+            self.record_portfolio(date, prices)
 
     def execute_trade(self, date, ticker, signal, price):
         """Execute trade and record order"""
@@ -54,13 +115,13 @@ class TradingSimulator:
         snapshot = {'Date': date, 'Cash': self.cash}
 
         # Add holdings for each stock
-        for ticker in self.stocks:
+        for ticker in self.assets:
             snapshot[f'{ticker}_Shares'] = self.portfolio[ticker]
             snapshot[f'{ticker}_Value'] = self.portfolio[ticker] * prices_row[ticker]
 
         # Calculate total value
         total_holdings = sum(self.portfolio[ticker] * prices_row[ticker]
-                           for ticker in self.stocks)
+                           for ticker in self.assets)
         snapshot['Total_Value'] = self.cash + total_holdings
 
         self.portfolio_snapshots.append(snapshot)
@@ -93,7 +154,7 @@ class TradingSimulator:
         return sharpe_ratio
 
     def plot_performance(self, prices_df, save_file='performance_plot.png'):
-        """Plot portfolio performance vs individual stocks"""
+        """Plot portfolio performance vs individual tickers"""
         self.prices_df = prices_df
         portfolio_df = pd.DataFrame(self.portfolio_snapshots)
 
@@ -123,7 +184,7 @@ class TradingSimulator:
         fig = plt.figure(figsize=(16, 10))
         gs = fig.add_gridspec(3, 2, hspace=0.3, wspace=0.3)
 
-        # Main plot: Portfolio value vs stocks (normalized to start at 100)
+        # Main plot: Portfolio value vs tickers (normalized to start at 100)
         ax_main = fig.add_subplot(gs[0, :])
 
         # Normalize all values to start at 100 for comparison
@@ -135,7 +196,7 @@ class TradingSimulator:
 
         # Plot each stock normalized
         colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']
-        for idx, ticker in enumerate(self.stocks):
+        for idx, ticker in enumerate(self.assets):
             initial_price = prices_df[ticker].iloc[0]
             normalized_stock = (prices_df[ticker] / initial_price) * 100
             ax_main.plot(prices_df['Date'], normalized_stock,
@@ -143,7 +204,7 @@ class TradingSimulator:
 
         ax_main.set_xlabel('Date', fontsize=12)
         ax_main.set_ylabel('Normalized Value (Start = 100)', fontsize=12)
-        ax_main.set_title('Portfolio Performance vs Individual Stocks (Normalized)',
+        ax_main.set_title('Portfolio Performance vs Individual Tickers (Normalized)',
                          fontsize=14, fontweight='bold')
         ax_main.legend(loc='best', fontsize=10)
         ax_main.grid(True, alpha=0.3)
@@ -191,7 +252,7 @@ class TradingSimulator:
             buy_orders = orders_df[orders_df['Action'] == 'BUY']
             sell_orders = orders_df[orders_df['Action'] == 'SELL']
 
-            for ticker in self.stocks:
+            for ticker in self.assets:
                 ticker_buys = buy_orders[buy_orders['Ticker'] == ticker]
                 ticker_sells = sell_orders[sell_orders['Ticker'] == ticker]
 
